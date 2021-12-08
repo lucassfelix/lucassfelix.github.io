@@ -1,140 +1,107 @@
 <!DOCTYPE html>
-<html>
-
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <style>
-        canvas {
-            border: 1px solid #d3d3d3;
-            background-color: #f1f1f1;
-        }
-    </style>
-</head>
-
-<body onload="startGame()">
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Unity WebGL Player | TheseusMaze</title>
+    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <link rel="stylesheet" href="TemplateData/style.css">
+  </head>
+  <body>
+    <div id="unity-container" class="unity-desktop">
+      <canvas id="unity-canvas" width=1920 height=1080></canvas>
+      <div id="unity-loading-bar">
+        <div id="unity-logo"></div>
+        <div id="unity-progress-bar-empty">
+          <div id="unity-progress-bar-full"></div>
+        </div>
+      </div>
+      <div id="unity-warning"> </div>
+      <div id="unity-footer">
+        <div id="unity-webgl-logo"></div>
+        <div id="unity-fullscreen-button"></div>
+        <div id="unity-build-title">TheseusMaze</div>
+      </div>
+    </div>
     <script>
+      var container = document.querySelector("#unity-container");
+      var canvas = document.querySelector("#unity-canvas");
+      var loadingBar = document.querySelector("#unity-loading-bar");
+      var progressBarFull = document.querySelector("#unity-progress-bar-full");
+      var fullscreenButton = document.querySelector("#unity-fullscreen-button");
+      var warningBanner = document.querySelector("#unity-warning");
 
-        var myGamePiece;
-        var myObstacles = [];
-        var myScore;
-
-        function startGame() {
-            myGamePiece = new component(30, 30, "red", 10, 120);
-            myGamePiece.gravity = 0.05;
-            myScore = new component("30px", "Consolas", "black", 280, 40, "text");
-            myGameArea.start();
+      // Shows a temporary message banner/ribbon for a few seconds, or
+      // a permanent error message on top of the canvas if type=='error'.
+      // If type=='warning', a yellow highlight color is used.
+      // Modify or remove this function to customize the visually presented
+      // way that non-critical warnings and error messages are presented to the
+      // user.
+      function unityShowBanner(msg, type) {
+        function updateBannerVisibility() {
+          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
         }
-
-        var myGameArea = {
-            canvas: document.createElement("canvas"),
-            start: function () {
-                this.canvas.width = 480;
-                this.canvas.height = 270;
-                this.context = this.canvas.getContext("2d");
-                document.body.insertBefore(this.canvas, document.body.childNodes[0]);
-                this.frameNo = 0;
-                this.interval = setInterval(updateGameArea, 20);
-            },
-            clear: function () {
-                this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            }
+        var div = document.createElement('div');
+        div.innerHTML = msg;
+        warningBanner.appendChild(div);
+        if (type == 'error') div.style = 'background: red; padding: 10px;';
+        else {
+          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+          setTimeout(function() {
+            warningBanner.removeChild(div);
+            updateBannerVisibility();
+          }, 5000);
         }
+        updateBannerVisibility();
+      }
 
-        function component(width, height, color, x, y, type) {
-            this.type = type;
-            this.score = 0;
-            this.width = width;
-            this.height = height;
-            this.speedX = 0;
-            this.speedY = 0;
-            this.x = x;
-            this.y = y;
-            this.gravity = 0;
-            this.gravitySpeed = 0;
-            this.update = function () {
-                ctx = myGameArea.context;
-                if (this.type == "text") {
-                    ctx.font = this.width + " " + this.height;
-                    ctx.fillStyle = color;
-                    ctx.fillText(this.text, this.x, this.y);
-                } else {
-                    ctx.fillStyle = color;
-                    ctx.fillRect(this.x, this.y, this.width, this.height);
-                }
-            }
-            this.newPos = function () {
-                this.gravitySpeed += this.gravity;
-                this.x += this.speedX;
-                this.y += this.speedY + this.gravitySpeed;
-                this.hitBottom();
-            }
-            this.hitBottom = function () {
-                var rockbottom = myGameArea.canvas.height - this.height;
-                if (this.y > rockbottom) {
-                    this.y = rockbottom;
-                    this.gravitySpeed = 0;
-                }
-            }
-            this.crashWith = function (otherobj) {
-                var myleft = this.x;
-                var myright = this.x + (this.width);
-                var mytop = this.y;
-                var mybottom = this.y + (this.height);
-                var otherleft = otherobj.x;
-                var otherright = otherobj.x + (otherobj.width);
-                var othertop = otherobj.y;
-                var otherbottom = otherobj.y + (otherobj.height);
-                var crash = true;
-                if ((mybottom < othertop) || (mytop > otherbottom) || (myright < otherleft) || (myleft > otherright)) {
-                    crash = false;
-                }
-                return crash;
-            }
-        }
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/Builds.loader.js";
+      var config = {
+        dataUrl: buildUrl + "/Builds.data.br",
+        frameworkUrl: buildUrl + "/Builds.framework.js.br",
+        codeUrl: buildUrl + "/Builds.wasm.br",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "DefaultCompany",
+        productName: "TheseusMaze",
+        productVersion: "1.0",
+        showBanner: unityShowBanner,
+      };
 
-        function updateGameArea() {
-            var x, height, gap, minHeight, maxHeight, minGap, maxGap;
-            for (i = 0; i < myObstacles.length; i += 1) {
-                if (myGamePiece.crashWith(myObstacles[i])) {
-                    return;
-                }
-            }
-            myGameArea.clear();
-            myGameArea.frameNo += 1;
-            if (myGameArea.frameNo == 1 || everyinterval(150)) {
-                x = myGameArea.canvas.width;
-                minHeight = 20;
-                maxHeight = 200;
-                height = Math.floor(Math.random() * (maxHeight - minHeight + 1) + minHeight);
-                minGap = 50;
-                maxGap = 200;
-                gap = Math.floor(Math.random() * (maxGap - minGap + 1) + minGap);
-                myObstacles.push(new component(10, height, "green", x, 0));
-                myObstacles.push(new component(10, x - height - gap, "green", x, height + gap));
-            }
-            for (i = 0; i < myObstacles.length; i += 1) {
-                myObstacles[i].x += -1;
-                myObstacles[i].update();
-            }
-            myScore.text = "SCORE: " + myGameArea.frameNo;
-            myScore.update();
-            myGamePiece.newPos();
-            myGamePiece.update();
-        }
+      // By default Unity keeps WebGL canvas render target size matched with
+      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
+      // Set this to false if you want to decouple this synchronization from
+      // happening inside the engine, and you would instead like to size up
+      // the canvas DOM size and WebGL render target sizes yourself.
+      // config.matchWebGLToCanvasSize = false;
 
-        function everyinterval(n) {
-            if ((myGameArea.frameNo / n) % 1 == 0) { return true; }
-            return false;
-        }
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        container.className = "unity-mobile";
+        // Avoid draining fillrate performance on mobile devices,
+        // and default/override low DPI mode on mobile browsers.
+        config.devicePixelRatio = 1;
+        unityShowBanner('WebGL builds are not supported on mobile devices.');
+      } else {
+        canvas.style.width = "1920px";
+        canvas.style.height = "1080px";
+      }
+      loadingBar.style.display = "block";
 
-        function accelerate(n) {
-            myGamePiece.gravity = n;
-        }
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = () => {
+        createUnityInstance(canvas, config, (progress) => {
+          progressBarFull.style.width = 100 * progress + "%";
+        }).then((unityInstance) => {
+          loadingBar.style.display = "none";
+          fullscreenButton.onclick = () => {
+            unityInstance.SetFullscreen(1);
+          };
+        }).catch((message) => {
+          alert(message);
+        });
+      };
+      document.body.appendChild(script);
     </script>
-    <br>
-    <button onmousedown="accelerate(-0.2)" onmouseup="accelerate(0.05)">ACCELERATE</button>
-    <p>Use the ACCELERATE button to stay in the air</p>
-    <p>How long can you stay alive?</p>
-</body>
-
+  </body>
 </html>
